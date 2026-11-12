@@ -1,6 +1,6 @@
 from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate, NextPageTemplate,
-    Paragraph, Spacer, Table, TableStyle, PageBreak
+    Paragraph, Spacer, Table, TableStyle, PageBreak, Image
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
@@ -62,7 +62,7 @@ class NumberedCanvas(canvas.Canvas):
         )
 
         # --- Scaled & Centered Square Image ---
-        image_path = r"C:\GithubLocalDirectory\ReportLab_Items\radar_header_3.png"
+        image_path = r"C:\GithubLocalDirectory\Hedge_Fund_Report\radar_header_3.png"
         img_size = 35
         center_x = (page_width - img_size) / 2
         image_y = page_height - 50
@@ -765,6 +765,12 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
 
     )
     story.append(Paragraph(footnotes, body_style))
+    story.append(PageBreak())
+    story.append(Paragraph("Annualized Returns vs. Annualized Volatility", h2_style))
+    story.append(Image("scatter_volatility_returns.png", width=400, height=300))
+    story.append(PageBreak())
+    story.append(Paragraph("Annualized Returns vs. Maximum Drawdown", h2_style))
+    story.append(Image("scatter_drawdown_returns.png", width=400, height=300))
 
     story.append(NextPageTemplate('Landscape'))
     story.append(PageBreak())

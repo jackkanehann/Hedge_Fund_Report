@@ -14,6 +14,11 @@ import io
 
 r_f = 0.025
 
+# --- Report color scheme (matches HF_ReportLab_4thstone.py) ------------------
+PRIMARY_COLOR = '#350B4D'    # dark purple - titles, axis labels, Fourthstone
+TEXT_MUTED = '#5A1F78'       # muted purple - benchmarks, secondary text
+LINE_COLOR = '#E5A93B'       # gold - optimal portfolio curve, accents
+
 def clean_numeric_column(df, column_name):
     """
     Cleans a dataframe column containing numbers stored as strings.
@@ -84,7 +89,7 @@ def create_monthly_tear_sheet_text(returns, benchmark, port_name='Strategy', ris
     
     # Maximum Drawdown
     cum_wealth = (1 + strat_rets).cumprod()
-    peaks = cum_wealth.cummax()
+    peaks = np.maximum.accumulate(cum_wealth)
     drawdowns = (cum_wealth - peaks) / peaks
     max_dd = drawdowns.min()
     
@@ -190,7 +195,7 @@ def create_monthly_tear_sheet_graphs(returns, benchmark, port_name='Strategy', r
     
     # Maximum Drawdown
     cum_wealth = (1 + strat_rets).cumprod()
-    peaks = cum_wealth.cummax()
+    peaks = np.maximum.accumulate(cum_wealth)
     drawdowns = (cum_wealth - peaks) / peaks
     max_dd = drawdowns.min()
     
@@ -353,7 +358,8 @@ def up_down_performance(returns, benchmark, port_name = 'Strat'):
     return up_table[port_name], down_table[port_name]
 
 
-upload_path = "C:/GithubLocalDirectory/Fourthstone_Cleaned_Data.xlsx"
+#upload_path = "C:/GithubLocalDirectory/Fourthstone_Cleaned_Data.xlsx"
+upload_path = "C:/GithubLocalDirectory/Hedge_Fund_Report/Fourthstone_Cleaned_Data.xlsx"
 #Tabs = 'LS_attribution' w/ cols 'Month', 'Long %', 'Short %', 'Gross %', 'Net %', 'Date'
 #Tab = 'Mthly_returns' w/ cols Month, Long Return %,	Short Return %,	Gross Monthly Composite Return %,	Net Monthly Composite Return %,	NASDAQ Bank Index Monthly Return %,
 # ,	Date,	SPX INDEX,	LBUSTRUU INDEX,	RTY INDEX,	BTSISOFR INDEX,	SOFR + 500bps,	KRX INDEX,	BKX INDEX
@@ -395,6 +401,344 @@ benchmark_SOFR = df_returns['BTSISOFR INDEX']
 benchmark_SOFR500 = df_returns['SOFR + 500bps']
 benchmark_KRX = df_returns['KRX INDEX']
 benchmark_BKX = df_returns['BKX INDEX']
+
+
+def _generate_10pct_weight_combinations(n_assets):
+    """Generate all portfolio weight vectors in 10% increments summing to 1.0."""
+    from itertools import combinations_with_replacement
+
+    portfolios = []
+    for combo in combinations_with_replacement(range(n_assets), 10):
+        weights = np.zeros(n_assets)
+        for idx in combo:
+            weights[idx] += 0.1  # each pick is one 10% slice
+        portfolios.append(weights)
+    return portfolios
+
+
+def _compute_portfolio_metrics(weights, returns_matrix, n_months):
+    """Return (annualized_return, annualized_vol, max_drawdown) for a portfolio."""
+    port_rets = returns_matrix @ weights
+    cum = (1 + port_rets).prod() - 1
+    ann_ret = (1 + cum) ** (12 / n_months) - 1 if n_months > 0 else np.nan
+    ann_vol = port_rets.std() * np.sqrt(12)
+    cum_wealth = (1 + port_rets).cumprod()
+    peaks = np.maximum.accumulate(cum_wealth)
+    dd = (cum_wealth - peaks) / peaks
+    max_dd = dd.min()
+    return ann_ret, ann_vol, max_dd
+
+
+def _efficient_frontier(x_vals, y_vals):
+    """Return the upper envelope (max y for each x) sorted ascending by x."""
+    x_vals = np.asarray(x_vals, dtype=float)
+    y_vals = np.asarray(y_vals, dtype=float)
+    order = np.argsort(x_vals)
+    x_sorted = x_vals[order]
+    y_sorted = y_vals[order]
+    running_max = np.maximum.accumulate(y_sorted)
+    return x_sorted, running_max
+
+
+def create_risk_return_scatter_image(risk_free_rate=r_f, width=450, height=300):
+    """
+    Generates a risk/return scatter plot (annualized return vs. annualized volatility)
+    for Fourthstone net return and key benchmarks. Each series is plotted as a single
+    point, with Fourthstone Net Return highlighted in red. An optimal portfolio
+    curve (efficient frontier from 10% weight-increment portfolios) shows the
+    maximum return possible for each level of volatility.
+
+    Returns a reportlab.platypus.Image flowable ready to append to the report story.
+    """
+    series_dict = {
+        'Fourthstone_net_return': Fourthstone_net_return,
+        'benchmark_SPY': benchmark_SPY,
+        'benchmark_bankIndex': benchmark_bankIndex,
+        'benchmark_AGG': benchmark_AGG,
+        'benchmark_SOFR': benchmark_SOFR,
+        'benchmark_KRX': benchmark_KRX,
+        'benchmark_BKX': benchmark_BKX,
+    }
+
+    # --- Align all series to a common calendar index -----------------------
+    aligned = pd.concat(
+        [s.rename(name) for name, s in series_dict.items() if s is not None],
+        axis=1,
+    ).dropna()
+
+    names = aligned.columns.tolist()
+    returns_matrix = aligned.values  # (n_months, n_assets)
+    n_months = len(aligned)
+
+    def ann_metrics(rets):
+        """Return (annualized_return, annualized_vol, max_drawdown)."""
+        cum = (1 + rets).prod() - 1
+        ann_ret = (1 + cum) ** (12 / n_months) - 1 if n_months > 0 else np.nan
+        ann_vol = rets.std() * np.sqrt(12)
+        cum_wealth = (1 + rets).cumprod()
+        peaks = np.maximum.accumulate(cum_wealth)
+        dd = (cum_wealth - peaks) / peaks
+        max_dd = dd.min()
+        return ann_ret, ann_vol, max_dd
+
+    # --- Individual asset points ------------------------------------------
+    x_ind, y_ind, labels_ind, colors_ind, sizes_ind = [], [], [], [], []
+
+    for name in names:
+        rets = aligned[name]
+        ar, av, md = ann_metrics(rets)
+        if np.isnan([ar, av, md]).any():
+            continue
+        x_ind.append(av)
+        y_ind.append(ar)
+        labels_ind.append(name)
+        if name == 'Fourthstone_net_return':
+            colors_ind.append('#d62728')   # red - special indicator
+            sizes_ind.append(80)            # smaller marker
+        else:
+            colors_ind.append('#333333')   # dark gray - benchmarks
+            sizes_ind.append(40)            # smaller marker
+
+    # --- Optimal portfolio curve (10% weight increments) -------------------
+    weight_combos = _generate_10pct_weight_combinations(len(names))
+    x_port, y_port = [], []
+    for w in weight_combos:
+        ar, av, md = _compute_portfolio_metrics(w, returns_matrix, n_months)
+        if np.isnan([ar, av, md]).any():
+            continue
+        x_port.append(av)
+        y_port.append(ar)
+
+    # --- Build the 2D figure ----------------------------------------------
+    fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=150)
+
+    # Plot efficient frontier curve
+    if len(x_port) > 1:
+        x_frontier, y_frontier = _efficient_frontier(x_port, y_port)
+        ax.plot(x_frontier, y_frontier, color='#000000', linewidth=1.5,
+                alpha=0.9, label='Optimal Portfolio Curve', zorder=2)
+
+    # Individual assets as scatter points
+    ax.scatter(x_ind, y_ind, s=sizes_ind, c=colors_ind, alpha=0.9,
+               edgecolors='black', linewidth=0.5, zorder=3)
+
+    # Annotate each point
+    for i, label in enumerate(labels_ind):
+        if label == 'Fourthstone_net_return':
+            display_label = 'Fourthstone Net'
+            ax.annotate(display_label, (x_ind[i], y_ind[i]),
+                       xytext=(6, 6), textcoords='offset points',
+                       fontsize=7, fontweight='bold', color='#000000',
+                       zorder=4)
+        else:
+            short = label.replace('benchmark_', '')
+            ax.annotate(short, (x_ind[i], y_ind[i]),
+                       xytext=(6, 6), textcoords='offset points',
+                       fontsize=6, color='#000000', zorder=4)
+
+    ax.set_xlabel('Annualized Volatility', fontsize=8, fontweight='bold',
+                  color='#000000')
+    ax.set_ylabel('Annualized Return', fontsize=8, fontweight='bold',
+                  color='#000000')
+    ax.set_title('Annualized Return vs. Volatility', fontsize=10,
+                 fontweight='bold', pad=8, color='#000000')
+    ax.grid(True, linestyle='--', alpha=0.4, color='#000000', zorder=0)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.1%}'))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.1%}'))
+
+    # Style spines and ticks to plain black
+    for spine in ax.spines.values():
+        spine.set_color('#000000')
+        spine.set_linewidth(0.8)
+    ax.tick_params(colors='#000000', labelsize=7)
+    ax.set_facecolor('white')
+
+    # No individual legend - shared legend is created separately
+
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight', dpi=150,
+                facecolor='white', edgecolor='none')
+    plt.close(fig)
+    buf.seek(0)
+
+    img = Image(buf, width=width, height=height)
+    return img
+
+
+def create_drawdown_return_scatter_image(width=450, height=300):
+    """
+    Generates a 2D scatter plot (annualized return vs. maximum drawdown)
+    for Fourthstone net return and key benchmarks. The x-axis shows maximum
+    drawdown magnitude (absolute value). Each series is plotted as a single
+    point, with Fourthstone Net Return highlighted in red. An optimal
+    portfolio curve shows the maximum return possible for each level of
+    drawdown risk.
+
+    Returns a reportlab.platypus.Image flowable ready to append to the report story.
+    """
+
+    series_dict = {
+        'Fourthstone_net_return': Fourthstone_net_return,
+        'benchmark_SPY': benchmark_SPY,
+        'benchmark_bankIndex': benchmark_bankIndex,
+        'benchmark_AGG': benchmark_AGG,
+        'benchmark_SOFR': benchmark_SOFR,
+        'benchmark_KRX': benchmark_KRX,
+        'benchmark_BKX': benchmark_BKX,
+    }
+
+    # --- Align all series to a common calendar index -----------------------
+    aligned = pd.concat(
+        [s.rename(name) for name, s in series_dict.items() if s is not None],
+        axis=1,
+    ).dropna()
+
+    names = aligned.columns.tolist()
+    returns_matrix = aligned.values  # (n_months, n_assets)
+    n_months = len(aligned)
+
+    def ann_metrics(rets):
+        """Return (annualized_return, max_drawdown)."""
+        cum = (1 + rets).prod() - 1
+        ann_ret = (1 + cum) ** (12 / n_months) - 1 if n_months > 0 else np.nan
+        cum_wealth = (1 + rets).cumprod()
+        peaks = np.maximum.accumulate(cum_wealth)
+        dd = (cum_wealth - peaks) / peaks
+        max_dd = dd.min()  # negative value
+        return ann_ret, max_dd
+
+    # --- Individual asset points ------------------------------------------
+    x_ind, y_ind, labels_ind, colors_ind, sizes_ind = [], [], [], [], []
+
+    for name in names:
+        rets = aligned[name]
+        ar, md = ann_metrics(rets)
+        if np.isnan([ar, md]).any():
+            continue
+        x_ind.append(abs(md))  # drawdown magnitude on x-axis
+        y_ind.append(ar)
+        labels_ind.append(name)
+        if name == 'Fourthstone_net_return':
+            colors_ind.append('#d62728')   # red - special indicator
+            sizes_ind.append(80)            # smaller marker
+        else:
+            colors_ind.append('#333333')   # dark gray - benchmarks
+            sizes_ind.append(40)            # smaller marker
+
+    # --- Optimal portfolio curve (10% weight increments) -------------------
+    weight_combos = _generate_10pct_weight_combinations(len(names))
+    x_port, y_port = [], []
+    for w in weight_combos:
+        ar, av, md = _compute_portfolio_metrics(w, returns_matrix, n_months)
+        if np.isnan([ar, av, md]).any():
+            continue
+        x_port.append(abs(md))  # drawdown magnitude
+        y_port.append(ar)
+
+    # --- Build the 2D figure ----------------------------------------------
+    fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=150)
+
+    # Plot efficient frontier curve
+    if len(x_port) > 1:
+        x_frontier, y_frontier = _efficient_frontier(x_port, y_port)
+        ax.plot(x_frontier, y_frontier, color='#000000', linewidth=1.5,
+                alpha=0.9, label='Optimal Portfolio Curve', zorder=2)
+
+    # Individual assets as scatter points
+    ax.scatter(x_ind, y_ind, s=sizes_ind, c=colors_ind, alpha=0.9,
+               edgecolors='black', linewidth=0.5, zorder=3)
+
+    # Annotate each point
+    for i, label in enumerate(labels_ind):
+        if label == 'Fourthstone_net_return':
+            display_label = 'Fourthstone Net'
+            ax.annotate(display_label, (x_ind[i], y_ind[i]),
+                       xytext=(6, 6), textcoords='offset points',
+                       fontsize=7, fontweight='bold', color='#000000',
+                       zorder=4)
+        else:
+            short = label.replace('benchmark_', '')
+            ax.annotate(short, (x_ind[i], y_ind[i]),
+                       xytext=(6, 6), textcoords='offset points',
+                       fontsize=6, color='#000000', zorder=4)
+
+    ax.set_xlabel('Maximum Drawdown', fontsize=8, fontweight='bold',
+                  color='#000000')
+    ax.set_ylabel('Annualized Return', fontsize=8, fontweight='bold',
+                  color='#000000')
+    ax.set_title('Annualized Return vs. Max Drawdown', fontsize=10,
+                 fontweight='bold', pad=8, color='#000000')
+    ax.grid(True, linestyle='--', alpha=0.4, color='#000000', zorder=0)
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.1%}'))
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.1%}'))
+
+    # Style spines and ticks to plain black
+    for spine in ax.spines.values():
+        spine.set_color('#000000')
+        spine.set_linewidth(0.8)
+    ax.tick_params(colors='#000000', labelsize=7)
+    ax.set_facecolor('white')
+
+    # No individual legend - shared legend is created separately
+
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight', dpi=150,
+                facecolor='white', edgecolor='none')
+    plt.close(fig)
+    buf.seek(0)
+
+    img = Image(buf, width=width, height=height)
+    return img
+
+
+def create_shared_legend_image(width=450, height=60):
+    """
+    Creates a standalone shared legend image for both scatter plots.
+
+    Shows: Fourthstone Net Return, Benchmarks, Optimal Portfolio Curve
+    Uses the report's color scheme (PRIMARY_COLOR, TEXT_MUTED, LINE_COLOR).
+
+    Returns a reportlab.platypus.Image flowable.
+    """
+    from matplotlib.lines import Line2D
+    import matplotlib
+
+    # Use a non-interactive backend
+    matplotlib.use('Agg')
+
+    fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=150)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+
+    legend_elements = [
+        Line2D([0], [0], marker='o', color='w', label='Fourthstone Net Return',
+               markerfacecolor='#d62728', markersize=8, markeredgecolor='black'),
+        Line2D([0], [0], marker='o', color='w', label='Benchmarks',
+               markerfacecolor='#333333', markersize=6, markeredgecolor='black'),
+        Line2D([0], [0], color='#000000', lw=1.5, label='Optimal Portfolio Curve',
+               alpha=0.9),
+    ]
+
+    ax.legend(handles=legend_elements, loc='center', ncol=3, fontsize=7,
+              frameon=False, handletextpad=0.5, columnspacing=1.5,
+              labelcolor='#000000')
+
+    plt.tight_layout(pad=0.5)
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight', dpi=150,
+                facecolor='white', edgecolor='none')
+    plt.close(fig)
+    buf.seek(0)
+
+    img = Image(buf, width=width, height=height)
+    return img
+
 
 def period_returns(start_date, end_date):
     #Cumulative and annualized return between two dates (inclusive) for each Fourthstone_ and benchmark_ series
