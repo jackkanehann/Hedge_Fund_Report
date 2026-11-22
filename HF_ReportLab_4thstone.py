@@ -373,17 +373,18 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
     
     story.append(Paragraph("Recommendation and Summary", h1_style))
     recommendation_text = (
-    "We recommend a 2% portfolio allocation to Fourthstone's flagship opportunity fund, assuming a 40% portfolio allocation to public equities. "
-    "Fourthstone's differentiated research process leads to an informational edge over other market participants in the small-cap bank equity space. "
-    "Their track record shows net benchmark outperformance 10 out of 12 years from 2014 to 2025, with an annualized alpha of 14.9% over that period. "
+    "We recommend a 2% portfolio allocation to Fourthstone's flagship Opportunity Fund, assuming a 40% portfolio allocation to public equities. "
+    "Fourthstone's differentiated research process leads to an informational edge over other market participants in the small-cap bank equity market, "
+    "evidenced by their track record of consistent outperformance. "
     "The fund has returned 19.4% annualized since inception, compared to 7.1% for the Nasdaq Bank Index and 14.6% for the S&amp;P 500. " \
+    "Their track record shows net benchmark outperformance 10 out of 12 years from 2014 to 2025. "
     "Their short positions have yielded a positive absolute return in 7 out of 12 years."  
     )
     story.append(Paragraph(recommendation_text, body_style))
 
     summary_text = ( 
-    "The fund's investment universe is the roughly 630 publicly traded bank common stocks, with a focus on the micro-to-mid-cap area. "
-    "This subset of the bank equity universe is a poor fit for larger funds due to onerous trading and reporting restrictions once you cross a 10% ownership threshold. "
+    "The fund's investment universe consists of the roughly 630 publicly traded bank common stocks, with a focus on the micro-to-mid-cap area. "
+    "This subset of the bank equity universe is a poor fit for larger funds due to onerous trading and reporting restrictions once an investor crosses a 10% ownership threshold. "
     "Accordingly, this universe lacks robust sell-side coverage, creating an ongoing opportunity for Fourthstone's research and trading apparatus. " \
     "Their research synthesizes quantitative balance sheet data from regulatory disclosures with fundamental analysis and due diligence on commercial banks and macroeconomic trends "
     "to inform portfolio positions and net exposure. " \
@@ -435,7 +436,7 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
     "The firm employs 14 people, with 8 on the investment team and the remainder in operations and marketing. "
     "The marketing and investor relations function is led by CEO Amy Stone and VP of IR Rachael Turin, while operations and "
     "compliance are led by Rob Anderson, CFO and CCO. "
-    "The investment team operates with a flat structure, with each research analyst and trader reporting directly to Phil Stone. " \
+    "The investment team maintains a flat structure, with each senior research analyst and trader reporting directly to Phil Stone. " \
     "They aim to generate positive absolute returns in any market environment by investing long and short in US banks, thrifts, and related financial service equities. " \
     "They view their short book as a return and alpha generator, as opposed to a mere volatility or beta dampener."
 
@@ -443,7 +444,7 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
 
     story.append(Paragraph(overview2, body_style))
 
-    story.append(Paragraph("Staff Overview<font size=12><sup><sup> 1</sup></sup></font>", h1_style))
+    story.append(Paragraph("Key Staff Overview<font size=12><sup><sup> 1</sup></sup></font>", h1_style))
 
 
     story.append(Paragraph("Phil Stone, Managing Partner", h2_style))
@@ -526,6 +527,7 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         "A sizable portion of their remaining revenues are flat fees for ongoing service of deposits and loans, or one-time loan origination fees. All of these revenues are predicated on the bank's ability to "
         "prudently underwrite and originate loans while growing a sticky and low-interest-bearing deposit base.  This is the fundamental value proposition of a commercial bank—"
         "provide a safe place for businesses and consumers to deposit their capital and make money by lending capital at higher rates than you pay depositors. " \
+        "<br/>""<br/>"
         "While large commercial banks and investment banks have multiple business segments to generate revenue, "
         "Fourthstone focuses on regional commerical banks with a straightforward business model " \
         "because so much of the business value is derived directly from the balance sheet.  Knowing the business is knowing the balance sheet, and vice-versa. " \
@@ -542,13 +544,14 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
     story.append(Paragraph(market_opp, body_style))
     story.append(Paragraph("Research", h2_style))
     market_opp2 = (
-        "Fourthstone's research aggregates information on commercial banks and their loan books to develop insights on broader economic trends and the commerical banking industry "
+        "Fourthstone aggregates information on commercial banks and their loan books to develop insights on broader economic trends and the commerical banking industry "
         "in addition to individual commercial banks. " \
         "The team is constantly updating their outlook on the sector, incorporating every new research note into forward estimates. " \
         "When new information becomes available, Fourthstone races to adjust their fair value estimates and trade accordingly before market prices can adjust. " \
         "They derive actionable investment theses from both quantitative and qualitative, fundamental analysis. " \
         "Fourthstone works to proactively understand how different banks will respond to a given industry catalyst. " \
-        "With the proper preparation, they can generate returns by responding quickly to market developments instead of having to predict future events. " \
+        "With the proper preparation, they can generate returns by responding quickly to market developments instead of having to predict future events. "
+        "This dynamic has led to their consistent outperformance. " \
         "<br/>""<br/>"
 
         "Fourthstone looks to initiate positions when their fair value estimates are dislocated from current prices. " \
@@ -565,14 +568,14 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         "To process available information efficiently, they begin with quantitative analysis of banks' regulatory data. " \
         "<br/>""<br/>"
 
-        "Fourthstone aggregates and synthesizes data from banks' requisite regulatory filings as it is released. "
+        "Fourthstone synthesizes data from banks' requisite regulatory filings as it is released. "
         "The data contained in these releases is voluminous. "
         "Asset and liability breakdowns detail bank and industry securities portfolios, deposit structures, and outstanding loans by amount outstanding and borrower type. "
         "Credit risk exhibits show past-due and non-accruing loans as well as loan charge offs and recoveries. " \
         "Income details in these filings include net interest income, fee income, operational overhead, and provision expenses. "
         "Quarterly average balances of deposits and loans, paired with NII data, show a given bank's effective yield paid to depositors and interest earned from loans. " \
         "It is critical to note that Fourthstone does not simply read through these reports. " \
-        "They electronically digest, process, and synthesize the data from these reports and subsequently have the data at their fingertips. " \
+        "They electronically digest, process, and synthesize the data from these reports into their own dashboards, screens, and tools. " \
         "Often, these reports are used to analyze industry or geographic trends by aggregating reports from a certain subset of individual banks. " \
         "Fourthstone relies on this wide data funnel and synthesis to effectively screen for investment ideas and areas of potential strength or vulnerability. "
         "<br/>""<br/>" \
@@ -584,18 +587,20 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         "They review management's target outcomes and how they plan to get there, in addition to updates on significant customers and industries the bank serves. "
         "Fourthstone may address areas of percieved weakness or risks to management's strategic plan. "
         "Technology investments are a growing part of these management discussions, as its role grows in the depositor relationship and in loan growth efforts. "
-        "Failure to properly invest in technology can crimp loan growth efforts or erode deposit stickiness as customer experience stagnates. " \
+        "Failure to properly invest in technology can crimp loan growth or erode deposit stickiness as customer experience stagnates. " \
+        
         "In addition to management meetings, Fourthstone tracks regional economic developments via social media, local business journals, and real estate listings to gather earlier "
-        "information on commerical loan activity within a given bank's service area. " \
-        "Drilling down on loan book diversification among borrower type and terms illustrates different banks' varying sensitivities to duration and macroeconomic developments.  "
-        "As a result, Fourthstone knows how regional lenders should benefit or suffer from a given economic or demographic tailwind, enabling them to take bets on other sectors " \
-        "via regional bank equities.  "
+        "information on commerical loan activity within a given bank's service area. "
+        "These non-vendor data sources can provide an edge when monitoring a rise or decline in loan activity. " \
+        "Drilling down on loan book diversification among borrower type and terms illustrates different banks'sensitivities to interest rate curves and macroeconomic factors.  "
+        "As a result, Fourthstone knows how regional lenders should benefit or suffer from a given economic or demographic change. "
+        "This enables Fourthstone to take bets on other sectors via regional bank equities. "
         "<br/>""<br/>"
 
         "Extensive research on the commercial banking industry, individual loan books, and macroeconomic trends inform TBV estimates, " \
         "which identify mispricings in the market.  Fourthstone adds another dimension to their risk and return calculus by identifying " \
         "and anticipating key catalysts relevant to each position.  These catalysts, such as the "
-        "interest rate environment, demographic trends, regulatory climate, or geopolitical landscape  "
+        "interest rate environment, credit events, demographic trends, regulatory climate, or geopolitical landscape  "
         "could directly impact profit forecasts. " \
         "Some catalysts are better suited for trading opportunities than core portfolio positions—examples include index deletions and additions or coverage initiation by a sell side firm. " \
         "<br/>""<br/>"
@@ -636,7 +641,7 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         "<br/>""<br/>"
         "Fourthstone's aggregate turnover rate varies depending on allocations to the short and opportunistic trading books, but they generally hold their core long positions for 1-4 years.  " \
         "While there is no pre-determined minimum holding period, Fourthstone seeks to be tax efficient when feasible. "
-        "Fourthstone typically shorts individual equities as a source of potential alpha, but will short ETFs during periods of elevated volatility or uncertainty. " \
+        "Fourthstone shorts individual equities as a source of potential alpha, but will short ETFs during periods of elevated volatility or uncertainty. " \
         "Market sentiment and investor positioning are key considerations for the opportunistic trading book. "
         "No positions are permitted to be more than 10% of portfolio NAV at cost.  " \
         "<br/>""<br/>"
@@ -665,10 +670,10 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         "<br/>""<br/>"
 
         "Liquidity is a critical factor for Fourthstone's strategy."
-        "The manager, traders, and operations team monitor trading volumes every day. They also monitor overall portfolio liquidity as a percentage of average daily trading volume to understand "
+        "The manager, traders, and operations team monitor relevant trading volumes every day. They track portfolio holdings as a percentage of average daily trading volume to understand "
         "the portfolio's liquidity profile. It is part of their strategy to leverage the price advantage associated with less liquid offers within their overall liquidity parameters."
         "They utilize a combination of proprietary and external risk management tools available through "
-        "Factset, Enfusion, and their trading platform. These include real time profit and loss, margin requirements, gross/net exposures, concentrations, portfolio, Beta, etc. to monitor the book."
+        "Factset, Enfusion, and their trading platform. These tools include real time profit and loss, margin requirements, gross/net exposures, concentrations, portfolio, Beta, etc. to monitor the book."
         "<br/>""<br/>"
 
         "The firm employs various internal risk controls, including constant portfolio monitoring by the manager, traders, and operations team as well as trading platform limitations and restrictions. " \
@@ -691,10 +696,10 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
     story.append(Paragraph("Performance Analysis", h2_style))
     #Include post-tax return analysis based on trailing K-1's; suitable for taxable investors?
     strategy_text = (
-        "Fourthstone's net returns are compelling.  "
-        "On an annualized basis, the Opportunity Fund has earned net returns of 18.6% compared to 4.8% for the Nasdaq Bank Index from January 2014 through July 2026. " 
+        "Fourthstone's track record is compelling.  "
+        "The Opportunity Fund has generated annualized net returns of 18.6% compared to 4.8% for the benchmark Nasdaq Bank Index from January 2014 through July 2026. " 
         "The Nasdaq bank index includes each of the 232 domestic bank stocks listed on the NASDAQ exchange.  This index includes both large, mid, and small cap bank equities. "
-        "The appendix includes the KBW Bank index ('Bank Idx') and KBW Regional Bank index (Reg Bank Idx).  " \
+        "Other bank equity indices are the KBW Bank index ('Bank Idx') and KBW Regional Bank index (Reg Bank Idx).  " \
         "Fourthstone has outperformed these indices as well; the KBW Bank index returned 9.7% and the KBW Regional Bank index returned 6.9% over the same period."
         "Unlike the broad-based Nasdaq index, the KBW indices split bank equities by size.  "
         "Bulge bracket and national regional banks constitute the KBW Bank index, while small-to-mid size regional and community banks constitute the regional index. " \
@@ -702,19 +707,20 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         "<br/>""<br/>"
 
         "For a taxable investor, Fourthstone's after-tax returns are less enticing than headline net returns. " \
-        "Assuming an investor is subject to the highest income tax bracket, they should expect a tax bill for 30-40% of the fund's net returns in a given year. " \
+        "Assuming an individual investor is subject to the highest marginal income tax bracket, they should expect a tax bill for 30-40% of the fund's net returns in a given year. " \
         "This figure can vary from year to year based on market volatility. For example, broad equity declines late in 2022 resulted in realized gains in excess of total return. " \
         "On the contrary, years like 2024 can result in minimal tax liabilities when unrealized returns, qualified dividends, and long-term capital gains make up most of the fund's net return. "
-        "Ironically, taxable investors were likely thrilled to outperform the benchmark bank index and S&amp;P 500 by over 26% in 2022 and "
-        "disappointed to underperform the benchmark by 4.5% and S&amp;P 500 by 12.7% in 2024. "
+        "Tax efficiency is only one component of returns.  Taxable investors were likely thrilled to outperform the benchmark bank index and S&amp;P 500 by over 26% in 2022 despite the tax liability and "
+        "was disappointed to underperform the benchmark by 4.5% and S&amp;P 500 by 12.7% in 2024. "
         "While tax inefficiency may cause some investors to pause, Fourthstone's track record during market downturns makes a strong case for a through-the-cycle allocation. " \
         "<br/>""<br/>" 
 
         "From January 2014 to July 2026, there were two major drawdown periods for bank equities. " \
         "After peaking in 2018, the Nasdaq Bank index declined over 51%, forming a trough in March 2020 before recovering to the prior peak on February 2021. "
         "From June 2018 to March 2020, the Nasdaq Bank index declined 44%, compared to a 17.6% decline for the Fourthstone Opportunity Fund.  Their long book posted losses "
-        "of 23% while their short book gained just under 13% over the same period. "
+        "of 23% while their short book gained 13% over the same period. "
         "For the full drawdown-and-recovery period from June 2018 to February 2021, Fourthstone posted net returns of 22.3% compared to a decline of 1.9% for the Nasdaq Bank index. " \
+        "<br/>""<br/>" 
         "After fiscal and monetary stimulus boosted asset valuations post-COVID, "
         "the Nasdaq Bank index experienced another drawdown from January 2022 through July 2026, reaching a trough in May 2023.  "
         "From January 2022 to May 2023, the Nasdaq Bank index declined 43.0%, compared to a 17.4% decline in Fourthstone's Opportunity Fund, buoyed by a resilient long book posting loses of 20.6% " \
@@ -744,21 +750,21 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         "<sup>3</sup>: FFIEC Call Report: a quarterly filing detailing the bank's balance sheet, income statement, and extensive supplementary schedules covering loan concentrations, regulatory capital ratios," \
         "   non-performing and past due loans, off balance sheet activities, and insurance assessments."
         "<br/>""<br/>"
-        "FR Y-9: While the FFIEC report tracks individual bank subsidiaries, the FR Y-9 tracks the performance, risk profile, and financial health of the parent bank holdng company on a quarterly basis." \
-        "Note that you would be required to file this if you exceeded a 10% stake in a publicly bank stock."
+        "FR Y-9: While the FFIEC report tracks individual bank subsidiaries, the FR Y-9 tracks the performance, risk profile, and financial health of the parent bank holdng company on a quarterly basis. " \
+        "Note that an investor would be required to file this if they exceeded a 10% holding of a bank's equity."
         "<br/>""<br/>"
         "FR 2644: "
         "   Weekly Report of Selected Assets and Liabilities of Domestically Chartered Commercial Banks and U.S. Branches and Agencies of Foreign Banks is a high-frequency balance sheet report. "
         "   It is also known as the bank credit report.  The Federal Reserve aggregates results and releases a macro-level H.8 report on Wedensday evening.  Banks with less than 5B in assets can opt to report monthly."
         "<br/>""<br/>"
-        "FR Y-14 A/Q/M" \
+        "FR Y-14 A/Q/M: " \
         "   Report assessing capital adequacy and supporting stress tests under the Dodd-Frank Act. A required filing for banks and bank holding companies with more than 100B in consolidated assets." \
         "   The annual report includes quantitative capital projections and is published as part of the Federal Reserve Stress Test Results Report" \
         "   The quarterly report includes asset classses, capital components, and PPNR.  "
         "       Federal Reserve uses these granular asset details internally to calibrate the macro-simulations and economic stress models that fuel the annual DFAST aggregate results." \
         "   The monthly report includes detailed loan portfolio collections (mortgage, credit cards), which are published to FRED.  Records for individual banks are confidential across each iteration of the report. "
         "<br/>""<br/>"
-        "FDIC Quarterly Banking Profile, An aggregated quarterly report that tracks the ocerall health, performance, and risk profile of FDIC-insured institutions."
+        "FDIC Quarterly Banking Profile: An aggregated quarterly report that tracks the ocerall health, performance, and risk profile of FDIC-insured institutions."
         "<br/>""<br/>"
         "Uniform Bank Performance Report: A tool provided by FFIEC that aggregates and standardizes FFIEC Call Report data across customizable peer bank groups for easier comparative analysis." 
 
