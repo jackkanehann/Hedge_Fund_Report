@@ -2,12 +2,14 @@ from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate, NextPageTemplate,
     Paragraph, Spacer, Table, TableStyle, PageBreak, Image
 )
+from reportlab.platypus.flowables import HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.pdfgen import canvas
 from xml.sax.saxutils import escape
 from Monthly_Return_Analysis_Fourthstone import get_tearsheet_data, get_updown_data
+from monthly_returns_table import build_monthly_returns_page_story
 
 #powershell: .\.venv\Scripts\Activate.ps1
 
@@ -364,6 +366,17 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         spaceAfter=8
     )
 
+    disclaimer_style = ParagraphStyle(
+        'Disclaimer',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=7.5,
+        leading=10,
+        textColor=colors.HexColor("#4A5568"),
+        alignment=0,  # left-aligned; justification rivers at this size
+        spaceAfter=0
+    )
+
     story = []
     
     # ------------------ PAGE 1: TITLE & EXECUTIVE SUMMARY ------------------
@@ -419,6 +432,13 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
     ]))
     story.append(terms_table)
 
+    story.append(PageBreak())
+
+    # ------------------ PAGE: MONTHLY RETURNS MATRIX ------------------
+    # Monthly net returns by year (2026 back to 2014) for the fund, Nasdaq Bank
+    # Index and S&P 500.  Sits on its own page between the term sheet and the
+    # Firm Overview.
+    story.extend(build_monthly_returns_page_story())
     story.append(PageBreak())
 
     story.append(Paragraph("Firm Overview", h1_style))
@@ -542,6 +562,30 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         
     )
     story.append(Paragraph(market_opp, body_style))
+    story.append(Paragraph("Portfolio Construction", h2_style))
+    port_construct = (
+        "Fourthstone's portfolio is structured as a combination of three investment groups: core longs, core shorts, and an opportunstic trading book. "
+        "Positions are considered part of the opportunistic trading book when they are held for 30 days or less. "
+        "Most positions enter the portfolio at 25-50bps at cost, increasing in size as conviction increases over time. " \
+        "The core long book consists of 40-50 holdings of at least 1% of NAV, with confident ideas allocated at 3-5% of the portfolio at cost. " \
+        "The core short book consists of 10-20 core short positions with smaller position sizes than the long book. " \
+        "The total portfolio typically consists of 30-60 core positions.  "
+        "<br/>""<br/>"
+        "Fourthstone's aggregate turnover rate varies depending on allocations to the short and opportunistic trading books, but they generally hold their core long positions for 1-4 years.  " \
+        "While there is no pre-determined minimum holding period, Fourthstone seeks to be tax efficient when feasible. "
+        "Fourthstone shorts individual equities as a source of potential alpha, but will short ETFs during periods of elevated volatility or uncertainty. " \
+        "Market sentiment and investor positioning are key considerations for the opportunistic trading book. "
+        "No positions are permitted to be more than 10% of portfolio NAV at cost.  " \
+        "<br/>""<br/>"
+        "Gross portfolio exposure is capped at 200%, and has averaged 126% since inception.  " 
+        "Net exposure is variable, ranging from (5)% to 128% since inception.  "
+        "Net exposure is informed by the opportunity set identified by the research team and their macroeconomic outlook for the sector. "
+        "Of all the month-end observations reviewed, 30% of months (46/151) ended with a net exposure less than 80%. " \
+        "50% of months (76/151) ended with a net exposure between 80-110%, and 19% of months (29/151) ended with net exposure over 110%."
+        
+        ""
+        )
+    story.append(Paragraph(port_construct, body_style))
     story.append(Paragraph("Research", h2_style))
     market_opp2 = (
         "Fourthstone aggregates information on commercial banks and their loan books to develop insights on broader economic trends and the commerical banking industry "
@@ -630,30 +674,6 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
     )
 
     story.append(Paragraph(market_opp2, body_style))
-    story.append(Paragraph("Portfolio Construction", h2_style))
-    port_construct = (
-        "Fourthstone's portfolio is structured as a combination of three investment groups: core longs, core shorts, and an opportunstic trading book. "
-        "Positions are considered part of the opportunistic trading book when they are held for 30 days or less. "
-        "Most positions enter the portfolio at 25-50bps at cost, increasing in size as conviction increases over time. " \
-        "The core long book consists of 40-50 holdings of at least 1% of NAV, with confident ideas allocated at 3-5% of the portfolio at cost. " \
-        "The core short book consists of 10-20 core short positions with smaller position sizes than the long book. " \
-        "The total portfolio typically consists of 30-60 core positions.  "
-        "<br/>""<br/>"
-        "Fourthstone's aggregate turnover rate varies depending on allocations to the short and opportunistic trading books, but they generally hold their core long positions for 1-4 years.  " \
-        "While there is no pre-determined minimum holding period, Fourthstone seeks to be tax efficient when feasible. "
-        "Fourthstone shorts individual equities as a source of potential alpha, but will short ETFs during periods of elevated volatility or uncertainty. " \
-        "Market sentiment and investor positioning are key considerations for the opportunistic trading book. "
-        "No positions are permitted to be more than 10% of portfolio NAV at cost.  " \
-        "<br/>""<br/>"
-        "Gross portfolio exposure is capped at 200%, and has averaged 126% since inception.  " 
-        "Net exposure is variable, ranging from (5)% to 128% since inception.  "
-        "Net exposure is informed by the opportunity set identified by the research team and their macroeconomic outlook for the sector. "
-        "Of all the month-end observations reviewed, 30% of months (46/151) ended with a net exposure less than 80%. " \
-        "50% of months (76/151) ended with a net exposure between 80-110%, and 19% of months (29/151) ended with net exposure over 110%."
-        
-        ""
-        )
-    story.append(Paragraph(port_construct, body_style))
     story.append(Paragraph("Trading, Liquidity, and Portfolio Risk", h2_style))
     trading_and_risk = (
         "The portfolio manager (Phil Stone) has sole day-to-day trading authority for Fourthstone's funds.  The senior trader (Patrick Kelley) serves as an execution trader and the firm's " \
@@ -919,6 +939,29 @@ def create_hedge_fund_report(output_filename="hedge_fund_report.pdf"):
         appendix_definition_style,
         appendix_width
     ))
+
+    # ------------------ IMPORTANT DISCLOSURES (final page) ------------------
+    # Appendix D fills its page, so the disclaimer gets its own final page
+    # rather than splitting mid-paragraph across a page boundary.
+    story.append(PageBreak())
+    story.append(Paragraph("Important Disclosures", h2_style))
+    story.append(HRFlowable(
+        width="100%", thickness=0.75, color=line_color,
+        spaceBefore=2, spaceAfter=8
+    ))
+    disclaimer_text = (
+        "The information published herein is provided for informational purposes only, and does not constitute an "
+        "offer, solicitation or recommendation to sell or an offer to buy securities, investment products or "
+        "investment advisory services. All information, views, opinions and estimates are subject to change or "
+        "correction without notice. Nothing contained herein constitutes financial, legal, tax, or other advice. "
+        "The appropriateness of an investment or strategy will depend on an investor\u2019s circumstances and "
+        "objectives. These opinions may not fit to your financial status, risk and return preferences. Investment "
+        "recommendations may change and readers are urged to check with their investment advisors before making any "
+        "investment decisions. Information provided is based on public information, by sources believed to be "
+        "reliable but we cannot attest to its accuracy. Estimates of future performance are based on assumptions "
+        "that may not be realized. Past performance is not necessarily indicative of future returns."
+    )
+    story.append(Paragraph(disclaimer_text, disclaimer_style))
 
     
     # Construct PDF using custom dual-pass NumberedCanvas
