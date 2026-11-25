@@ -1,35 +1,58 @@
-import pandas as pd
-import numpy as np
+"""Risk/return and drawdown/return scatter plots.
+
+Every point comes from ``series_registry.py``: the plots loop over the specs
+flagged ``include_in_scatter``, resolve their values through ``data_loader`` and
+label/colour them from the spec.  Adding a CSV series to the registry therefore
+adds a point to both charts with no code change here.
+
+Run:  python scatter_plots.py
+Out:  scatter_volatility_returns.png, scatter_drawdown_returns.png
+      (written next to this file, referenced by HF_ReportLab_4thstone.py)
+"""
+
+import logging
+from dataclasses import dataclass
+
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 
-# Import data series from the analysis script
-# These should be available after running or importing Monthly_Return_Analysis_Fourthstone
-from Monthly_Return_Analysis_Fourthstone import (
-    Fourthstone_net_return,
-    benchmark_SPY,
-    benchmark_AGG,
-    benchmark_SOFR,
-    benchmark_bankIndex,
-    benchmark_KRX,
-    benchmark_BKX,
-    benchmark_SOFR500,  # we will exclude this
-)
+from data_loader import PROJECT_ROOT, build_series_map
+from series_registry import scatter_specs
 
-# Report colour scheme (matches HF_ReportLab_4thstone.py)
-PRIMARY_COLOR = '#350B4D'
-TEXT_MUTED = '#5A1F78'
-LINE_COLOR = '#E5A93B'  # gold
-GOLD_COLOR = LINE_COLOR
+OUTPUT_VOLATILITY = PROJECT_ROOT / "scatter_volatility_returns.png"
+OUTPUT_DRAWDOWN = PROJECT_ROOT / "scatter_drawdown_returns.png"
+
+# Colours come from each series' SeriesSpec in series_registry.py, so new
+# series can be styled without editing this file.
+
+FIG_SIZE = (8, 6)
+DPI = 150
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ScatterPoint:
+    """One plotted series: its position, label and styling."""
+
+    label: str
+    x: float
+    y: float
+    color: str
+    size: int
+    months: int = 0
+
 
 # ---------------------------------------------------------------------------
-# Helper functions
+# Metrics
 # ---------------------------------------------------------------------------
 def annualized_return(series):
     """CAGR from monthly returns series."""
-    cum = (1 + series).prod() - 1
-    n_months = len(series)
-    years = n_months / 12.0
-    return (1 + cum) ** (1 / years) - 1 if years > 0 else np.nan
+    cumulative = (1 + series).prod() - 1
+    years = len(series) / 12.0
+    return (1 + cumulative) ** (1 / years) - 1 if years > 0 else np.nan
 
 
 def annualized_volatility(series):
@@ -38,111 +61,138 @@ def annualized_volatility(series):
 
 def max_drawdown(series):
     """Maximum peak-to-trough drawdown."""
-    cum = (1 + series).cumprod()
-    running_max = cum.cummax()
-    drawdown = (cum - running_max) / running_max
+    cumulative = (1 + series).cumprod()
+    running_max = cumulative.cummax()
+    drawdown = (cumulative - running_max) / running_max
     return drawdown.min()  # most negative
 
 
-# ---------------------------------------------------------------------------
-# Build lists of series and names, excluding SOFR500
-# ---------------------------------------------------------------------------
-benchmarks = {
-    "S&P 500": benchmark_SPY,
-    "Global AGG": benchmark_AGG,
-    "SOFR": benchmark_SOFR,
-    "bank Index": benchmark_bankIndex,
-    "KRX Index": benchmark_KRX,
-    "Bank Idx": benchmark_BKX,
-    # "SOFR + 500bps": benchmark_SOFR500  # excluded per request
+METRICS = {
+    "annual_vol": annualized_volatility,
+    "max_dd": max_drawdown,
+    "annual_return": annualized_return,
 }
 
-# Compute metrics for Fourthstone net returns and each benchmark
-metrics = {}
-metrics["Fourthstone Net Return"] = {
-    "annual_return": annualized_return(Fourthstone_net_return),
-    "annual_vol": annualized_volatility(Fourthstone_net_return),
-    "max_dd": max_drawdown(Fourthstone_net_return),
-}
-
-for name, series in benchmarks.items():
-    metrics[name] = {
-        "annual_return": annualized_return(series),
-        "annual_vol": annualized_volatility(series),
-        "max_dd": max_drawdown(series),
-    }
 
 # ---------------------------------------------------------------------------
-# Helper: build colored point lists for a given metric key
+# Point collection
 # ---------------------------------------------------------------------------
-def build_point_lists(metrics, key):
-    """Return xs, ys, colors lists ordered by metric keys.
-    Fourthstone Net Return gets GOLD_COLOR, all benchmarks get 'black'."""
-    xs = []
-    ys = []
-    colors = []
-    for name, m in metrics.items():
-        xs.append(m[key])
-        ys.append(m["annual_return"])
-        if name == "Fourthstone Net Return":
-            colors.append(GOLD_COLOR)
-        else:
-            colors.append("black")
-    return xs, ys, colors
+def collect_points(specs, series_map, metric_key):
+    """Build ScatterPoints for every series, skipping ones without data.
 
+    Each series is measured over its own full history, matching the behaviour
+    of the original hand-written plots (which did not align the series first).
+    """
+    metric = METRICS[metric_key]
+    points = []
+    for spec in specs:
+        series = series_map.get(spec.key)
+        if series is None:
+            logger.warning("series %r is not available - skipped", spec.key)
+            continue
 
-# ---------------------------------------------------------------------------
-# Scatter plot 1: Annualized Returns vs Annualized Volatility
-# ---------------------------------------------------------------------------
-fig1, ax1 = plt.subplots(figsize=(8, 6))
+        series = series.dropna()
+        if series.empty:
+            logger.warning("series %r has no observations - skipped", spec.key)
+            continue
 
-xs1, ys1, colors1 = build_point_lists(metrics, "annual_vol")
-ax1.scatter(xs1, ys1, s=80, c=colors1)
+        annual = annualized_return(series)
+        x_value = metric(series)
+        if np.isnan(annual) or np.isnan(x_value):
+            logger.warning("series %r produced NaN metrics - skipped", spec.key)
+            continue
 
-# Annotate points with names
-for i, name in enumerate(metrics.keys()):
-    ax1.annotate(name, (xs1[i], ys1[i]), textcoords="offset points", xytext=(5, 5), fontsize=8)
+        points.append(ScatterPoint(
+            label=spec.label,
+            x=float(x_value),
+            y=float(annual),
+            color=spec.color,
+            size=spec.marker_size,
+            months=int(len(series)),
+        ))
+    return points
 
-ax1.set_xlabel("Annualized Volatility")
-ax1.set_ylabel("Annualized Returns")
-ax1.set_title("Annualized Returns vs. Annualized Volatility")
-ax1.grid(True, alpha=0.3)
-# Legend removed per request
-
-# Add marginal whitespace on x‑axis
-ax1.margins(x=0.15)
-
-# tight layout
-plt.tight_layout()
-fig1.savefig(r"C:\GithubLocalDirectory\Hedge_Fund_Report\scatter_volatility_returns.png", dpi=150)
-plt.close(fig1)
 
 # ---------------------------------------------------------------------------
-# Scatter plot 2: Annualized Returns vs Maximum Drawdown
+# Rendering
 # ---------------------------------------------------------------------------
-fig2, ax2 = plt.subplots(figsize=(8, 6))
+def render_scatter(points, x_label, y_label, title, output_path, invert_x=False):
+    """Draw one scatter chart and save it as a PNG."""
+    fig, ax = plt.subplots(figsize=FIG_SIZE)
 
-xs2, ys2, colors2 = build_point_lists(metrics, "max_dd")
-ax2.scatter(xs2, ys2, s=80, c=colors2)
+    ax.scatter(
+        [point.x for point in points],
+        [point.y for point in points],
+        s=[point.size for point in points],
+        c=[point.color for point in points],
+    )
 
-for i, name in enumerate(metrics.keys()):
-    ax2.annotate(name, (xs2[i], ys2[i]), textcoords="offset points", xytext=(5, 5), fontsize=8)
+    for point in points:
+        ax.annotate(
+            point.label,
+            (point.x, point.y),
+            textcoords="offset points",
+            xytext=(5, 5),
+            fontsize=8,
+        )
 
-ax2.set_xlabel("Maximum Drawdown")
-ax2.set_ylabel("Annualized Returns")
-ax2.set_title("Annualized Returns vs. Maximum Drawdown")
-ax2.grid(True, alpha=0.3)
-# Legend removed per request
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+    # Legend intentionally omitted - points are annotated directly
 
-# Reverse the x‑axis as requested
-ax2.invert_xaxis()
+    if invert_x:
+        ax.invert_xaxis()
 
-# Add marginal whitespace on x‑axis
-ax2.margins(x=0.15)
+    # Add marginal whitespace on x-axis
+    ax.margins(x=0.15)
 
-# tight layout
-plt.tight_layout()
-fig2.savefig(r"C:\GithubLocalDirectory\Hedge_Fund_Report\scatter_drawdown_returns.png", dpi=150)
-plt.close(fig2)
+    plt.tight_layout()
+    fig.savefig(output_path, dpi=DPI)
+    plt.close(fig)
+    return output_path
 
-print("Scatter plots saved: scatter_volatility_returns.png, scatter_drawdown_returns.png")
+
+def log_summary(points, metric_label):
+    """Print what was plotted so the numbers can be sanity-checked."""
+    print(f"{'Series':<28}{'Annual Return':>14}{metric_label:>16}{'Months':>8}")
+    for point in points:
+        print(f"{point.label:<28}{point.y:>13.2%}{point.x:>16.2%}{point.months:>8}")
+
+
+def main():
+    specs = scatter_specs()
+    series_map = build_series_map(specs)
+
+    volatility_points = collect_points(specs, series_map, "annual_vol")
+    drawdown_points = collect_points(specs, series_map, "max_dd")
+
+    render_scatter(
+        volatility_points,
+        "Annualized Volatility",
+        "Annualized Returns",
+        "Annualized Returns vs. Annualized Volatility",
+        OUTPUT_VOLATILITY,
+    )
+    render_scatter(
+        drawdown_points,
+        "Maximum Drawdown",
+        "Annualized Returns",
+        "Annualized Returns vs. Maximum Drawdown",
+        OUTPUT_DRAWDOWN,
+        invert_x=True,
+    )
+
+    log_summary(volatility_points, "Annualized Vol")
+    log_summary(drawdown_points, "Max Drawdown")
+    print(
+        f"\nScatter plots saved: {OUTPUT_VOLATILITY.name}, {OUTPUT_DRAWDOWN.name} "
+        f"({len(volatility_points)} series)"
+    )
+    return volatility_points, drawdown_points
+
+
+if __name__ == "__main__":
+    main()
+

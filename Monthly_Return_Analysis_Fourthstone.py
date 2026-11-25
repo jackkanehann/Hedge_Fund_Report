@@ -12,37 +12,30 @@ from reportlab.lib.pagesizes import letter, landscape
 from xml.sax.saxutils import escape
 import io
 
+# Data access lives in data_loader; clean_numeric_column is re-exported here so
+# existing callers of Monthly_Return_Analysis_Fourthstone.clean_numeric_column
+# keep working unchanged.
+from data_loader import (
+    build_series_map,
+    clean_numeric_column,
+    load_csv_returns,
+    load_project_series,
+    load_workbook_attribution,
+    load_workbook_returns,
+)
+from series_registry import scatter_specs
+
+
+def _scatter_series_dict():
+    """All series that belong on the scatter plots, from series_registry."""
+    return build_series_map(scatter_specs())
+
 r_f = 0.025
 
 # --- Report color scheme (matches HF_ReportLab_4thstone.py) ------------------
 PRIMARY_COLOR = '#350B4D'    # dark purple - titles, axis labels, Fourthstone
 TEXT_MUTED = '#5A1F78'       # muted purple - benchmarks, secondary text
 LINE_COLOR = '#E5A93B'       # gold - optimal portfolio curve, accents
-
-def clean_numeric_column(df, column_name):
-    """
-    Cleans a dataframe column containing numbers stored as strings.
-    Handles percentages, currency symbols, and commas.
-    """
-    # 1. Copy the column as strings and remove whitespace
-    s = df[column_name].astype(str).str.strip()
-    
-    # 2. Check if the column represents percentages
-    is_percent = s.str.endswith('%').any()
-    
-    # 3. Remove common non-numeric characters (%, $, commas)
-    s = s.str.replace('%', '', regex=False)
-    s = s.str.replace('$', '', regex=False)
-    s = s.str.replace(',', '', regex=False)
-    
-    # 4. Convert to numeric, forcing errors to NaN (missing values)
-    numeric_col = pd.to_numeric(s, errors='coerce')
-    
-    # 5. Convert percentage values to decimals
-    if is_percent:
-        numeric_col = numeric_col / 100.0
-        
-    return numeric_col
 
 def create_monthly_tear_sheet_text(returns, benchmark, port_name='Strategy', risk_free_rate=r_f):
     #Generates an advanced monthly metrics table
@@ -358,49 +351,40 @@ def up_down_performance(returns, benchmark, port_name = 'Strat'):
     return up_table[port_name], down_table[port_name]
 
 
-#upload_path = "C:/GithubLocalDirectory/Fourthstone_Cleaned_Data.xlsx"
-upload_path = "C:/GithubLocalDirectory/Hedge_Fund_Report/Fourthstone_Cleaned_Data.xlsx"
+# Data is located and loaded by data_loader.py (resolved relative to this file),
+# so there are no absolute paths to maintain here.
 #Tabs = 'LS_attribution' w/ cols 'Month', 'Long %', 'Short %', 'Gross %', 'Net %', 'Date'
 #Tab = 'Mthly_returns' w/ cols Month, Long Return %,	Short Return %,	Gross Monthly Composite Return %,	Net Monthly Composite Return %,	NASDAQ Bank Index Monthly Return %,
 # ,	Date,	SPX INDEX,	LBUSTRUU INDEX,	RTY INDEX,	BTSISOFR INDEX,	SOFR + 500bps,	KRX INDEX,	BKX INDEX
 
-all_sheets_raw = pd.read_excel(upload_path, sheet_name=None)
-all_sheets = {key: df.dropna(how='any') for key, df in all_sheets_raw.items()}
-df_attribution = all_sheets['LS_attribution']
-df_returns = all_sheets['Mthly_returns']
+df_attribution = load_workbook_attribution()
+df_returns = load_workbook_returns()
 
-# 1. Convert to datetime, localize to ET ('America/New_York'), and set as index
-df_attribution = df_attribution.set_index(pd.to_datetime(df_attribution['Date']).dt.tz_localize('America/New_York'))
-df_returns = df_returns.set_index(pd.to_datetime(df_returns['Date']).dt.tz_localize('America/New_York'))
+# Every registered series, keyed by name.  Adding a CSV series to
+# series_registry.py makes it available here and in the scatter plots without
+# editing this file.
+project_series = load_project_series()
 
-df_attribution = df_attribution.drop(columns=['Month'])
-df_returns = df_returns.drop(columns=['Month'])
+# 1. Series arrive already indexed by month end and localised to ET
+#    ('America/New_York') with numeric cleaning applied - see data_loader.py.
 
-for col in df_attribution:
-    if col != 'Date':
-        df_attribution[col] = clean_numeric_column(df_attribution, col)
-
-for col in df_returns:
-    if col != 'Date':
-        df_returns[col] = clean_numeric_column(df_returns, col)
-
-Fourthstone_net_return = df_returns['Net Monthly Composite Return %']
-Fourthstone_gross_return = df_returns['Gross Monthly Composite Return %']
-Fourthstone_long_return = df_returns['Long Return %']
-Fourthstone_short_return = df_returns['Short Return %']
+Fourthstone_net_return = project_series['Fourthstone_net_return']
+Fourthstone_gross_return = project_series['Fourthstone_gross_return']
+Fourthstone_long_return = project_series['Fourthstone_long_return']
+Fourthstone_short_return = project_series['Fourthstone_short_return']
 
 long_exposure = df_attribution['Long %']
 short_exposure = df_attribution['Short %']
 gross_exposure = df_attribution['Gross %']
 net_exposure = df_attribution['Net %']
 
-benchmark_SPY = df_returns['SPX INDEX']
-benchmark_bankIndex = df_returns['NASDAQ Bank Index Monthly Return %']
-benchmark_AGG = df_returns['LBUSTRUU INDEX']
-benchmark_SOFR = df_returns['BTSISOFR INDEX']
-benchmark_SOFR500 = df_returns['SOFR + 500bps']
-benchmark_KRX = df_returns['KRX INDEX']
-benchmark_BKX = df_returns['BKX INDEX']
+benchmark_SPY = project_series['benchmark_SPY']
+benchmark_bankIndex = project_series['benchmark_bankIndex']
+benchmark_AGG = project_series['benchmark_AGG']
+benchmark_SOFR = project_series['benchmark_SOFR']
+benchmark_SOFR500 = project_series['benchmark_SOFR500']
+benchmark_KRX = project_series['benchmark_KRX']
+benchmark_BKX = project_series['benchmark_BKX']
 
 
 def _generate_10pct_weight_combinations(n_assets):
@@ -450,15 +434,7 @@ def create_risk_return_scatter_image(risk_free_rate=r_f, width=450, height=300):
 
     Returns a reportlab.platypus.Image flowable ready to append to the report story.
     """
-    series_dict = {
-        'Fourthstone_net_return': Fourthstone_net_return,
-        'benchmark_SPY': benchmark_SPY,
-        'benchmark_bankIndex': benchmark_bankIndex,
-        'benchmark_AGG': benchmark_AGG,
-        'benchmark_SOFR': benchmark_SOFR,
-        'benchmark_KRX': benchmark_KRX,
-        'benchmark_BKX': benchmark_BKX,
-    }
+    series_dict = _scatter_series_dict()
 
     # --- Align all series to a common calendar index -----------------------
     aligned = pd.concat(
@@ -579,15 +555,7 @@ def create_drawdown_return_scatter_image(width=450, height=300):
     Returns a reportlab.platypus.Image flowable ready to append to the report story.
     """
 
-    series_dict = {
-        'Fourthstone_net_return': Fourthstone_net_return,
-        'benchmark_SPY': benchmark_SPY,
-        'benchmark_bankIndex': benchmark_bankIndex,
-        'benchmark_AGG': benchmark_AGG,
-        'benchmark_SOFR': benchmark_SOFR,
-        'benchmark_KRX': benchmark_KRX,
-        'benchmark_BKX': benchmark_BKX,
-    }
+    series_dict = _scatter_series_dict()
 
     # --- Align all series to a common calendar index -----------------------
     aligned = pd.concat(
